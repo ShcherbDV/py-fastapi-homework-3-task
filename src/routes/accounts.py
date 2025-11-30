@@ -12,8 +12,6 @@ from config import get_jwt_auth_manager, get_settings, BaseAppSettings
 from database import (
     get_db,
     UserModel,
-    UserGroupModel,
-    UserGroupEnum,
     ActivationTokenModel,
     PasswordResetTokenModel,
     RefreshTokenModel,
@@ -58,14 +56,12 @@ async def user_register(
         db_user = UserModel.create(
             email=user.email,
             raw_password=user.password,
-            group_id=UserGroupEnum.USER,
+            group_id=1,
         )
         jwt_token = auth_manager.create_access_token(
             {"user_id": db_user.id}, expires_delta=timedelta(days=1)
         )
-        db_user.activation_token = ActivationTokenModel(
-            user_id=db_user.id, token=jwt_token
-        )
+        db_user.activation_token = ActivationTokenModel()
         db.add(db_user)
         await db.commit()
         await db.refresh(db_user)
