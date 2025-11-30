@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import cast
 
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from jose import JWTError
 from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
@@ -58,7 +58,7 @@ async def user_register(
         db_user = UserModel.create(
             email=user.email,
             raw_password=user.password,
-            group_id=1,
+            group_id=UserGroupEnum.USER,
         )
         jwt_token = auth_manager.create_access_token(
             {"user_id": db_user.id}, expires_delta=timedelta(days=1)
@@ -82,7 +82,6 @@ async def user_register(
 async def user_activate(
     user: UserActivationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    auth_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
 ):
     result = await db.execute(
         select(UserModel)
@@ -96,8 +95,6 @@ async def user_activate(
         )
     if db_user.is_active:
         raise HTTPException(status_code=400, detail="User account is already active.")
-
-    auth_manager.verify_access_token_or_raise(user.token)
 
     if (
         db_user.activation_token is None
