@@ -42,7 +42,6 @@ router = APIRouter()
 async def user_register(
     user: UserRegistrationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    auth_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
 ):
     result = await db.execute(select(UserModel).where(UserModel.email == user.email))
     db_user = result.scalar_one_or_none()
@@ -57,9 +56,6 @@ async def user_register(
             email=user.email,
             raw_password=user.password,
             group_id=1,
-        )
-        jwt_token = auth_manager.create_access_token(
-            {"user_id": db_user.id}, expires_delta=timedelta(days=1)
         )
         db_user.activation_token = ActivationTokenModel()
         db.add(db_user)
