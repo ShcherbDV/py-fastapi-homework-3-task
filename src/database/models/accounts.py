@@ -154,8 +154,6 @@ class UserProfileModel(Base):
     )
     user: Mapped[UserModel] = relationship("UserModel", back_populates="profile")
 
-    __table_args__ = (UniqueConstraint("user_id"),)
-
     def __repr__(self):
         return (
             f"<UserProfileModel(id={self.id}, first_name={self.first_name}, last_name={self.last_name}, "

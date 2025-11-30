@@ -35,7 +35,7 @@ language_schema_example = {"id": 1, "name": "English"}
 
 country_schema_example = {"id": 1, "code": "US", "name": "United States"}
 
-genre_schema_example = {"id": 1, "genre": "Comedy"}
+genre_schema_example = {"id": 1, "name": "Comedy"}
 
 actor_schema_example = {"id": 1, "name": "JimmyFallon"}
 

@@ -29,7 +29,7 @@ class MessageResponseSchema(BaseModel):
     message: str
 
 
-class PasswordResetRequestSchema(BaseModel):
+class PasswordResetRequestSchema(UserBase):
     pass
 
 

@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
-from config.settings import Settings
 from database import (
     get_db,
     UserModel,
@@ -35,7 +34,6 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
 )
 from security.interfaces import JWTAuthManagerInterface
-from security.passwords import hash_password, verify_password
 
 router = APIRouter()
 
@@ -56,40 +54,10 @@ async def user_register(
             detail=f"A user with this email {user.email} already exists.",
         )
 
-    if len(user.password) < 8:
-        raise HTTPException(
-            status_code=422, detail="Password must contain at least 8 characters."
-        )
-
-    if not any(char.isupper() for char in user.password):
-        raise HTTPException(
-            status_code=422,
-            detail="Password must contain at least one uppercase letter.",
-        )
-
-    if not any(char.isdigit() for char in user.password):
-        raise HTTPException(
-            status_code=422, detail="Password must contain at least one digit."
-        )
-
-    if not any(char.islower() for char in user.password):
-        raise HTTPException(
-            status_code=422, detail="Password must contain at least one lower letter."
-        )
-
-    if not any(
-        char in ("@", "$", "!", "%", "*", "?", "#", "&") for char in user.password
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="Password must contain at least one special character: @, $, !, %, *, ?, #, &.",
-        )
-
     try:
-        hashed = hash_password(user.password)
-        db_user = UserModel(
+        db_user = UserModel.create(
             email=user.email,
-            _hashed_password=hashed,
+            raw_password=user.password,
             group_id=1,
         )
         jwt_token = auth_manager.create_access_token(
@@ -102,6 +70,8 @@ async def user_register(
         await db.commit()
         await db.refresh(db_user)
         return db_user
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except SQLAlchemyError:
         raise HTTPException(
             status_code=500, detail="An error occurred during user creation."
@@ -120,6 +90,10 @@ async def user_activate(
         .where(UserModel.email == user.email)
     )
     db_user = result.scalar_one_or_none()
+    if not db_user:
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired activation token."
+        )
     if db_user.is_active:
         raise HTTPException(status_code=400, detail="User account is already active.")
 
@@ -139,7 +113,6 @@ async def user_activate(
 
     db_user.is_active = True
     db_user.activation_token = None
-    db_user.refresh_token = RefreshTokenModel()
     await db.commit()
     await db.refresh(db_user)
     return MessageResponseSchema(message="User account activated successfully.")
